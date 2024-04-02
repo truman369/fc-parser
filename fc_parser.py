@@ -44,6 +44,10 @@ for row in br.page.find(class_='games-table').children:
             'url': url,
         })
 
+if len(games) == 0:
+    logging.error('Empty list of games')
+    exit(1)
+
 # caclultate last and next games
 for idx, game in enumerate(games):
     if game['date'] > datetime.now():
@@ -53,6 +57,9 @@ for idx, game in enumerate(games):
         else:
             last_game = next_game
         break
+    if idx == len(games) - 1:
+        logging.error('No more games')
+        exit(1)
 
 # check time from last game and set current game
 if last_game['date'] + timedelta(days=1) > datetime.now():
