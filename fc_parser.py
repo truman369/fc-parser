@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 
 # internal imports
+import locale
 import logging
 import re
 from datetime import datetime, timedelta
 
 # external imports
-import dateparser
 import mechanicalsoup
 
 # config vars
@@ -22,22 +22,22 @@ logging.basicConfig(
     datefmt='%Y-%m-%d %H:%M:%S',
     level=logging.INFO,
 )
+# set russian locale for datetime parsing
+locale.setlocale(locale.LC_TIME, 'ru_RU.UTF-8')
 # init browser
 br = mechanicalsoup.StatefulBrowser()
 br.open(source_link)
 
 # get list of dates and urls for all games of team
 games = []
-for row in br.get_current_page().find(class_='games-table').children:
+for row in br.page.find(class_='games-table').children:
     if isinstance(row, str) or 'class' not in row.attrs.keys():
         continue
     if row.attrs['class'][0] == 'games-tour-tr':
         g_date = row.text.strip()
     if re.search(team, row.text):
         g_time = row.find(class_='match-date').text.replace('-', '00:00')
-        g_date += ' ' + g_time
-        g_date = dateparser.parse(g_date, languages=['ru'],
-                                  date_formats=['%d %B %Y %H:%M'])
+        g_date = datetime.strptime(f'{g_date} {g_time}', '%d %B %Y %H:%M')
         url = br.absolute_url(row.find(class_='game-score').a.get('href'))
         games.append({
             'date': g_date,
@@ -59,9 +59,9 @@ else:
 
 # get current game url data and format output
 br.open(game['url'])
-res = br.get_current_page().find(class_='game-header')
+res = br.page.find(class_='game-header')
 res = re.sub(r'/upload/s4y_teams/\d+/BigImage/', '/team/big/', res.prettify())
-res = res.replace('href="/', 'href="' + br.absolute_url('/'))
+res = res.replace('href="/', f"href=\"{br.absolute_url('/')}")
 
 # update file if needed
 try:
@@ -69,11 +69,11 @@ try:
         f.seek(0)
         old = f.read()
         if old != res:
-            logging.info('Current game: ' + str(game['date']))
+            logging.info(f'Current game: {game["date"]}')
             f.truncate(0)
             f.write(res)
-            logging.info('File updated: ' + output_file)
+            logging.info(f'File updated: {output_file}')
         else:
             logging.debug('Nothing to change')
 except Exception as e:
-    logging.error('File update failed: ' + str(e))
+    logging.error(f'File update failed: {e}')
