@@ -10,7 +10,7 @@ from datetime import datetime, timedelta
 import mechanicalsoup
 
 # config vars
-source_link = 'https://www.pfl-russia.com/competitions/season-2021-2022/3b/'
+source_link = 'https://2b.2fnl.com/competitions/season-2024/3/'
 output_file = 'out.htm'
 log_file = 'parser.log'
 team = 'Коломна'
@@ -48,7 +48,10 @@ for row in br.page.find(class_='games-table').children:
 for idx, game in enumerate(games):
     if game['date'] > datetime.now():
         next_game = game
-        last_game = games[idx-1]
+        if idx > 0:
+            last_game = games[idx-1]
+        else:
+            last_game = next_game
         break
 
 # check time from last game and set current game
